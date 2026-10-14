@@ -4,7 +4,7 @@ A standalone Headlamp plugin for NVIDIA GPU telemetry from **DCGM Exporter and P
 
 The plugin provides a GPU inventory from recent metrics, utilization, framebuffer memory, temperature, power draw, and 1/6/24-hour history. It also adds GPU sections to Node details and Pods requesting `nvidia.com/gpu` or `nvidia.com/mig-*` resources.
 
-This repository is prepared for a first public release. No GitHub repository, release or Artifact Hub listing has been published yet. Plugin loading and browser integration have been tested in Headlamp **0.45.0** with Plugin SDK **0.14.0**, using synthetic API responses. Desktop integration and real GPU hardware require separate validation. See the [validation record](docs/VALIDATION.md).
+Source is available at [gen3111620/headlamp-gpu-monitor](https://github.com/gen3111620/headlamp-gpu-monitor). The first GitHub Release and Artifact Hub registration are still pending. Plugin loading is validated in Headlamp **0.45.0** with Plugin SDK **0.14.0**, including Linux Desktop and a live four-GPU Kubernetes cluster. Direct device-reading comparisons, Windows/macOS Desktop and MIG/shared-GPU hardware need separate validation. See the [validation record](docs/VALIDATION.md).
 
 ![GPU monitor preview using synthetic fixtures](docs/screenshots/preview-light.png)
 
@@ -55,7 +55,20 @@ plugins/
     └── docs/
 ```
 
-For an in-cluster deployment, mount that directory into the Headlamp container at its configured `-plugins-dir`. Restart Headlamp or refresh the browser after plugin reload. Desktop plugin directories depend on OS and installation; use Headlamp's documented plugin directory. Desktop loading has not yet been tested for this release.
+For an in-cluster deployment, mount that directory into the Headlamp container at its configured `-plugins-dir`. Restart Headlamp or refresh the browser after plugin reload. Linux Desktop 0.45.0 loading is validated from the active profile's `user-plugins` directory, without Plugin Development Mode; storage paths depend on OS and profile. See [Desktop validation](docs/VALIDATION.md#linux-desktop-validation).
+
+## Plugin Catalog publishing
+
+The tracked `catalog/` directory contains Artifact Hub ownership and package metadata. This alone does not publish the plugin: the owner must upload the release archive and register the catalog repository before Desktop users can find it. Community users may need to turn off **Only official plugins** in Plugin Catalog settings.
+
+After packaging, refresh metadata from the exact archive you intend to upload:
+
+```sh
+npm run test:catalog
+npm run catalog -- gen3111620/headlamp-gpu-monitor --write
+```
+
+Without `--write`, metadata is prepared under the ignored `artifacts/catalog/` directory. Follow [the release checklist](docs/RELEASING.md) for the GitHub Release and Artifact Hub registration details.
 
 ## Connect to Prometheus
 

@@ -26,10 +26,10 @@ npm run checksums
 
 ## 接上實際叢集
 
-將安裝包解壓縮到 Headlamp 的插件目錄，重新整理頁面，在側邊欄開啟 GPU Monitor，填入 Prometheus 的 namespace、Service 名稱及 port。若為多叢集共用的 Prometheus，還需填入 cluster label 與對應值。
+將安裝包解壓縮到 Headlamp 的插件目錄，重新整理頁面，在側邊欄開啟 GPU Monitor。首次開啟會自動尋找 Prometheus；有多個來源時，在 Connection settings 選擇。手動填寫 namespace、Service、port 或多叢集 label 的欄位位於 Advanced settings。
 
 第一版顯示的是最近有指標的 GPU，並非完整的硬體清單或排程分配統計。MIG 會獨立列出，缺少的指標顯示 `—`。Pod 關聯取決於 exporter 提供的標籤，不代表共享 GPU 的獨占用量。
 
 ## 發布狀態
 
-GitHub repo、push、Release 和 Artifact Hub 上架都尚未執行。之後確認本機成果，再使用你的個人 GitHub 帳號處理。公開帳號、維護者姓名與 email 尚未填入，以免放入錯誤身分資料。
+原始碼已位於個人 GitHub 專案 `gen3111620/headlamp-gpu-monitor`。Linux Desktop 0.45.0 已完成安裝包載入與真實叢集驗證；Catalog 上架檔案位於 `catalog/`，Release 和 Artifact Hub 登記仍由你操作。詳細步驟見 [RELEASING.md](RELEASING.md)。上架前請確認 `catalog/artifacthub-repo.yml` 的 email 與 Artifact Hub 帳號一致。

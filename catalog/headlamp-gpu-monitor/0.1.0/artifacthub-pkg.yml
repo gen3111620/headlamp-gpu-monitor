@@ -1,0 +1,32 @@
+version: 0.1.0
+name: headlamp-gpu-monitor
+displayName: GPU Monitor
+createdAt: '2026-10-14T06:24:04.418Z'
+description: NVIDIA GPU monitoring for Headlamp using DCGM Exporter and Prometheus.
+license: Apache-2.0
+category: monitoring-logging
+homeURL: https://github.com/gen3111620/headlamp-gpu-monitor
+keywords:
+  - gpu
+  - nvidia
+  - dcgm
+  - prometheus
+  - kubernetes
+maintainers:
+  - name: arvis.su
+    email: gen3111620@gmail.com
+links:
+  - name: Source
+    url: https://github.com/gen3111620/headlamp-gpu-monitor
+  - name: Releases
+    url: https://github.com/gen3111620/headlamp-gpu-monitor/releases
+install: >-
+  In Headlamp Desktop 0.45.0, open Plugin Catalog and disable "Only official plugins" if this
+  community plugin is hidden. Install GPU Monitor and reload the UI. The selected Kubernetes cluster
+  needs DCGM Exporter and a Prometheus Service scraping it.
+annotations:
+  headlamp/plugin/archive-url: >-
+    https://github.com/gen3111620/headlamp-gpu-monitor/releases/download/v0.1.0/headlamp-gpu-monitor-0.1.0.tar.gz
+  headlamp/plugin/archive-checksum: sha256:53c24a945db75e6de410859ac84a4d44c043838f1210c9aec6e6d9b757edf19a
+  headlamp/plugin/version-compat: '=0.45.0'
+  headlamp/plugin/distro-compat: app,in-cluster,web,linux

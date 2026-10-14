@@ -13,6 +13,7 @@
     "build": "headlamp-plugin build",
     "package": "headlamp-plugin package . artifacts",
     "checksums": "node scripts/checksums.mjs",
+    "catalog": "node scripts/catalog.mjs",
     "format": "prettier --write src tests scripts *.json *.ts *.mjs README.md docs",
     "format:check": "prettier --check src tests scripts *.json *.ts *.mjs README.md docs",
     "lint": "eslint --max-warnings 0 --ext .ts,.tsx src tests",
@@ -20,11 +21,13 @@
     "tsc": "tsc --noEmit",
     "test": "vitest run",
     "test:promql": "vitest run --config promql.config.ts",
+    "test:catalog": "node --test scripts/catalog.test.mjs",
+    "test:desktop": "playwright test --config desktop.config.ts",
     "storybook": "headlamp-plugin storybook",
     "storybook-build": "headlamp-plugin storybook-build",
     "preview": "vite --config preview.config.mjs --host 0.0.0.0 --port 5178",
     "test:browser": "playwright test",
-    "validate": "npm run format:check && npm run lint && npm run tsc && npm test && npm run build"
+    "validate": "npm run format:check && npm run lint && npm run tsc && npm test && npm run test:catalog && npm run build"
   },
   "keywords": [
     "headlamp",
@@ -63,6 +66,7 @@
   },
   "devDependencies": {
     "@kinvolk/headlamp-plugin": "0.14.0",
-    "@playwright/test": "^1.56.0"
+    "@playwright/test": "^1.56.0",
+    "js-yaml": "4.3.2"
   }
 }

@@ -60,4 +60,24 @@ Wait for Headlamp to respond at `http://127.0.0.1:4467` before running the brows
 - Test MIG and shared-GPU modes separately before claiming them supported on a specific deployment.
 - Verify access controls and cluster label scoping with the deployment's actual authentication and monitoring topology.
 
-Desktop loading and direct hardware validation remain outstanding. The original Headlamp source tree was not changed. No remote repository, push, release, infrastructure change or CI workflow was created.
+## Linux Desktop validation
+
+On October 14, 2026, the official Linux x64 Headlamp Desktop **0.45.0** tarball was downloaded from the project's GitHub Release and verified against its published SHA256 (`53fad75ab54432c84f8ec319fa7e4040a2a6785667155e0124c6ce0f9690cfee`). Playwright launched the actual packaged Electron application under Xvfb with an isolated user profile.
+
+The plugin archive was extracted into that profile's production `Headlamp/user-plugins` directory; Plugin Development Mode was not enabled. The test checked the shipped Plugin Catalog sidebar entry, GPU Monitor loading, automatic Prometheus discovery, all four live GPU rows across two worker Nodes, history rendering, local settings persistence and reload. No Kubernetes or Prometheus responses were mocked. There were no page errors or failed metrics requests. Screenshots remain in ignored `artifacts/desktop-catalog.png` and `artifacts/desktop-live-gpu.png`.
+
+To reproduce on Linux with a display server, `tar`, a packaged Desktop 0.45.0 executable, a built plugin archive and a suitable kubeconfig:
+
+```sh
+HEADLAMP_DESKTOP_EXECUTABLE=/path/to/Headlamp-0.45.0-linux-x64/headlamp \
+HEADLAMP_DESKTOP_KUBECONFIG=/path/to/kubeconfig \
+HEADLAMP_DESKTOP_CONTEXT=your-context \
+HEADLAMP_DESKTOP_EXPECT_GPU_COUNT=4 \
+npm run test:desktop
+```
+
+Use `xvfb-run -a npm run test:desktop` in place of the last line on a server without a display. The expected GPU count is optional. The test uses backend port 4469 and a temporary profile, which is removed on success or failure. Traces are disabled to avoid recording authenticated cluster traffic. Never place the kubeconfig in this repository.
+
+All three Catalog preparation tests passed. They verify YAML serialization, the archive URL and exact checksum, Desktop compatibility metadata, explicit writes to the tracked catalog and stable creation timestamps. Run `npm run test:catalog`; these checks are also included in `npm run validate`. The generated catalog passed the official Artifact Hub CLI 1.23.0 command `ah lint --kind headlamp --path catalog`, with one package found and zero package errors.
+
+This verifies manual installation of the release archive and actual Desktop runtime behavior. It does not verify public Catalog indexing or installation from Artifact Hub, which require the owner to publish the release and register the repository. Windows/macOS Desktop, direct device-reading comparisons, exporter interruption and MIG/shared-GPU hardware remain untested. No release, push or Artifact Hub registration was performed during this check.
