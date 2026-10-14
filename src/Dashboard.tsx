@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
@@ -30,12 +31,14 @@ import {
   YAxis,
 } from 'recharts';
 import { chartRows, inScope, type MetricField, type Scope } from './metrics';
+import type { DiscoveryState } from './useDiscovery';
 import type { MetricsState } from './useMetrics';
 
 export interface DashboardProps {
   cluster: string;
   state: MetricsState;
   configured: boolean;
+  discovery?: DiscoveryState;
   scope?: Scope;
   hours: number;
   onHours: (hours: number) => void;
@@ -75,6 +78,7 @@ export function Dashboard({
   cluster,
   state,
   configured,
+  discovery,
   scope = {},
   hours,
   onHours,
@@ -146,7 +150,10 @@ export function Dashboard({
           </Typography>
         </Box>
         <Stack direction="row" gap={1}>
-          <Button onClick={onRefresh} disabled={!configured || state.loading}>
+          <Button
+            onClick={onRefresh}
+            disabled={configured ? state.loading : !discovery || discovery.loading}
+          >
             Refresh
           </Button>
           <Button variant="outlined" onClick={onConfigure} disabled={!cluster}>
@@ -157,16 +164,26 @@ export function Dashboard({
       {!cluster ? (
         <Alert severity="info">Select a single cluster to view GPU metrics.</Alert>
       ) : !configured ? (
-        <Alert
-          severity="info"
-          action={
-            <Button color="inherit" onClick={onConfigure}>
-              Configure
-            </Button>
-          }
-        >
-          Connect to a Prometheus Service that collects NVIDIA DCGM Exporter metrics.
-        </Alert>
+        discovery?.loading ? (
+          <Stack direction="row" spacing={1} alignItems="center" role="status">
+            <CircularProgress size={20} />
+            <Typography>Finding GPU metrics sources...</Typography>
+          </Stack>
+        ) : (
+          <Alert
+            severity={discovery?.message ? 'warning' : 'info'}
+            action={
+              <Button color="inherit" onClick={onConfigure}>
+                {discovery?.sources.length ? 'Select source' : 'Configure'}
+              </Button>
+            }
+          >
+            {discovery?.message ||
+              (discovery?.sources.length
+                ? 'Select a GPU metrics source for this cluster.'
+                : 'Connect to a Prometheus Service that collects NVIDIA DCGM Exporter metrics.')}
+          </Alert>
+        )
       ) : (
         <Stack spacing={2.5}>
           {state.error && (

@@ -6,7 +6,7 @@
   "private": true,
   "engines": {
     "node": ">=22.12.0",
-    "npm": ">=10"
+    "npm": ">=11"
   },
   "scripts": {
     "start": "headlamp-plugin start",
@@ -16,6 +16,7 @@
     "format": "prettier --write src tests scripts *.json *.ts *.mjs README.md docs",
     "format:check": "prettier --check src tests scripts *.json *.ts *.mjs README.md docs",
     "lint": "eslint --max-warnings 0 --ext .ts,.tsx src tests",
+    "lint-fix": "npm run lint -- --fix",
     "tsc": "tsc --noEmit",
     "test": "vitest run",
     "test:promql": "vitest run --config promql.config.ts",

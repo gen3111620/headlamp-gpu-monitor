@@ -122,6 +122,8 @@ describe('connection configuration', () => {
     const config = { ...defaultConfig, clusterLabel: 'cluster', clusterValue: 'prod"\\\n' };
     expect(selector(config)).toContain(`cluster=${JSON.stringify(config.clusterValue)}`);
     expect(freshQuery(config)).toContain('timestamp(');
+    expect(freshQuery(config)).toContain('or on (__name__)');
+    expect(freshQuery(config).split(' or on (__name__) ')).toHaveLength(Object.keys(fields).length);
     expect(freshQuery(config)).toContain('time() - 120');
   });
 });

@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { fixtureResponse } from './fixtures';
 
 test('loads the built plugin in Headlamp and queries the selected Service', async ({ page }) => {
+  test.setTimeout(90000);
   test.skip(
     !process.env.HEADLAMP_TEST_URL,
     'Set HEADLAMP_TEST_URL to an isolated Headlamp with the built plugin installed.'
@@ -102,6 +103,7 @@ test('loads the built plugin in Headlamp and queries the selected Service', asyn
     timeout: 20000,
   });
   await page.getByRole('button', { name: 'Connection settings' }).click();
+  await page.getByRole('button', { name: 'Advanced settings' }).click();
   await page.getByRole('textbox', { name: /^Service name/ }).fill('gpu-prometheus');
   await page.getByLabel('Cluster label', { exact: true }).fill('cluster');
   await page.getByLabel('Cluster label value', { exact: true }).fill('production');
@@ -143,8 +145,94 @@ test('loads the built plugin in Headlamp and queries the selected Service', asyn
   await expect(page.getByText(/Access denied. Check your Headlamp login/)).toBeVisible();
   await page.goto(`${process.env.HEADLAMP_TEST_URL}/c/other-demo/gpu-monitor`);
   await expect(
-    page.getByText('Connect to a Prometheus Service that collects NVIDIA DCGM Exporter metrics.')
+    page.getByText('No Prometheus Service found. Enter a connection manually.')
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'GPU-demo-a100-01', exact: true })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('automatically connects a matching Prometheus Service without filling connection settings', async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  test.skip(
+    !process.env.HEADLAMP_TEST_URL,
+    'Set HEADLAMP_TEST_URL to Headlamp with the plugin installed.'
+  );
+  const queries: string[] = [];
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.route('**/config', (route) =>
+    route.fulfill({ json: { clusters: [{ name: 'gpu-auto', auth_type: '', useToken: false }] } })
+  );
+  await page.route('**/clusters/**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/api/v1/services'))
+      return route.fulfill({
+        json: {
+          metadata: { resourceVersion: '1' },
+          items: [
+            {
+              metadata: { namespace: 'lens-metrics', name: 'prometheus' },
+              spec: { ports: [{ name: 'web', port: 80, targetPort: 9090 }] },
+            },
+          ],
+        },
+      });
+    if (url.pathname.endsWith('/api/v1/nodes'))
+      return route.fulfill({
+        json: {
+          metadata: { resourceVersion: '1' },
+          items: ['gpu-worker-01', 'gpu-worker-02'].map((name) => ({ metadata: { name } })),
+        },
+      });
+    if (url.pathname.endsWith('/query') || url.pathname.endsWith('/query_range')) {
+      queries.push(url.pathname);
+      const result = url.pathname.endsWith('/query_range')
+        ? fixtureResponse(
+            'matrix',
+            Number(url.searchParams.get('start')),
+            Number(url.searchParams.get('end')),
+            Number(url.searchParams.get('step'))
+          )
+        : fixtureResponse('vector');
+      result.data.result.forEach((series) => {
+        series.metric.cluster = 'production';
+      });
+      return route.fulfill({ json: result });
+    }
+    if (url.pathname.endsWith('/me')) return route.fulfill({ json: { name: 'test-user' } });
+    return route.fulfill({
+      json: {
+        kind: 'List',
+        apiVersion: 'v1',
+        metadata: { resourceVersion: '1' },
+        items: [],
+        groups: [],
+        resources: [],
+      },
+    });
+  });
+  await page.goto(`${process.env.HEADLAMP_TEST_URL}/c/gpu-auto/gpu-monitor`);
+  await expect(page.getByRole('cell', { name: '78%', exact: true })).toBeVisible({
+    timeout: 20000,
+  });
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('pluginConfigs')))
+    .toContain('lens-metrics');
+  expect(queries.every((path) => path.includes('http:prometheus:80/proxy'))).toBe(true);
+  await page.reload();
+  await expect(page.getByRole('cell', { name: '78%', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Connection settings' }).click();
+  await expect(page.getByRole('combobox', { name: 'GPU metrics source' })).toContainText(
+    'lens-metrics/prometheus:80'
+  );
+  await expect(page.getByLabel('Namespace', { exact: true })).not.toBeVisible();
+  await page.screenshot({ path: 'artifacts/connection-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(390);
+  await page.screenshot({ path: 'artifacts/connection-mobile.png', fullPage: true });
   expect(errors).toEqual([]);
 });

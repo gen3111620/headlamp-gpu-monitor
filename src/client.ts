@@ -11,7 +11,7 @@ export interface Snapshot extends DataSet {
   step: number;
 }
 
-function response(
+export function response(
   value: unknown,
   kind: 'vector' | 'matrix'
 ): { series: Series[]; warnings: string[] } {

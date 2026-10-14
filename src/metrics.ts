@@ -116,8 +116,11 @@ export function normalize(series: Series[]): { devices: Gpu[]; ignored: number }
   return { devices: [...devices.values()].sort((a, b) => a.id.localeCompare(b.id)), ignored };
 }
 
-export function selector(config: ConnectionConfig): string {
-  const names = Object.values(fields).join('|');
+export function selector(
+  config: ConnectionConfig,
+  metrics: string[] = Object.values(fields)
+): string {
+  const names = metrics.join('|');
   const cluster = config.clusterLabel
     ? `,${config.clusterLabel}=${JSON.stringify(config.clusterValue)}`
     : '';
@@ -125,9 +128,14 @@ export function selector(config: ConnectionConfig): string {
 }
 
 export function freshQuery(config: ConnectionConfig): string {
-  const metric = selector(config);
-  // Instant-vector result timestamps are evaluation times, so test the source sample's age in PromQL.
-  return `${metric} and (timestamp(${metric}) > time() - 120)`;
+  // Check source timestamps before any function can replace them with the evaluation time.
+  // Match the metric name explicitly when joining branches, retaining every metric for one GPU.
+  return Object.values(fields)
+    .map((name) => {
+      const metric = selector(config, [name]);
+      return `(${metric} and (timestamp(${metric}) > time() - 120))`;
+    })
+    .join(' or on (__name__) ');
 }
 
 export function chartRows(

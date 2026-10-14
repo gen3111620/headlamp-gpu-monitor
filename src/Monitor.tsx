@@ -1,12 +1,13 @@
 import { ConfigStore } from '@kinvolk/headlamp-plugin/lib';
 import { request } from '@kinvolk/headlamp-plugin/lib/ApiProxy';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { type ConnectionConfig, defaultConfig } from './config';
 import { Dashboard } from './Dashboard';
 import type { Scope } from './metrics';
 import { Settings } from './Settings';
+import { useDiscovery } from './useDiscovery';
 import { useMetrics } from './useMetrics';
 
 const store = new ConfigStore<Record<string, ConnectionConfig>>('headlamp-gpu-monitor');
@@ -20,10 +21,20 @@ export function Monitor({ cluster: resourceCluster, scope }: { cluster?: string;
 }
 
 function ClusterMonitor({ cluster, scope }: { cluster: string; scope?: Scope }) {
-  const config = useConfig()?.[cluster];
+  const saved = useConfig()?.[cluster];
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hours, setHours] = useState(1);
   const [refresh, setRefresh] = useState(0);
+  const [discoveryRefresh, setDiscoveryRefresh] = useState(0);
+  const discovery = useDiscovery(request, cluster, !saved || settingsOpen, discoveryRefresh);
+  const detected =
+    !settingsOpen && discovery.sources.length === 1 && discovery.sources[0].automatic
+      ? discovery.sources[0].config
+      : undefined;
+  const config = saved || detected;
+  useEffect(() => {
+    if (!saved && detected && cluster) store.update({ [cluster]: detected });
+  }, [saved, detected, cluster]);
   const state = useMetrics(request, config, cluster, hours, refresh);
   return (
     <>
@@ -31,16 +42,23 @@ function ClusterMonitor({ cluster, scope }: { cluster: string; scope?: Scope }) 
         cluster={cluster}
         state={state}
         configured={Boolean(config)}
+        discovery={discovery}
         scope={scope}
         hours={hours}
         onHours={setHours}
-        onRefresh={() => setRefresh((value) => value + 1)}
+        onRefresh={() => {
+          if (config) setRefresh((value) => value + 1);
+          else setDiscoveryRefresh((value) => value + 1);
+        }}
         onConfigure={() => setSettingsOpen(true)}
       />
       {settingsOpen && (
         <Settings
           cluster={cluster}
           initial={config || defaultConfig}
+          configured={Boolean(saved)}
+          discovery={discovery}
+          onDiscover={() => setDiscoveryRefresh((value) => value + 1)}
           onClose={() => setSettingsOpen(false)}
           onSave={(config) => {
             store.update({ [cluster]: config });

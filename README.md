@@ -14,7 +14,7 @@ This repository is prepared for a first public release. No GitHub repository, re
 - NVIDIA GPUs with compatible drivers and DCGM Exporter.
 - Prometheus scraping the exporter at intervals shorter than two minutes (15–30 seconds recommended).
 - Permission to access the Prometheus Service through the Kubernetes API proxy.
-- Node.js 22.12+ and npm 10+ to build from source. They are not required to run an installed plugin.
+- Node.js 22.12+ and npm 11+ to build from source. They are not required to run an installed plugin.
 
 Installing this plugin does not install drivers, the GPU Operator, exporters or Prometheus. Existing monitoring infrastructure is reused.
 
@@ -60,11 +60,12 @@ For an in-cluster deployment, mount that directory into the Headlamp container a
 ## Connect to Prometheus
 
 1. Select a single cluster in Headlamp and open **GPU Monitor** in the sidebar.
-2. Open **Connection settings**.
-3. Enter the Prometheus Service namespace, name, port and HTTP/HTTPS protocol. Defaults are suggestions only: `monitoring`, `prometheus-operated`, `9090`.
-4. If Prometheus is served under a subpath, enter it, for example `/prometheus`.
-5. For centralized Prometheus, enter the label and literal value identifying this cluster, for example `cluster=production`. Without a filter, all GPU series visible at that endpoint are eligible.
-6. Save. The plugin queries immediately and polls 30 seconds after each completed refresh.
+2. The plugin discovers Prometheus-compatible Services, uses their Service ports, and checks for recent DCGM GPU metrics. A unique source whose GPU node names all match the selected cluster is connected and saved automatically.
+3. If several sources match, open **Connection settings**, select a **GPU metrics source**, and save. Detected `cluster` label values are included in the choices; known foreign-cluster node names are excluded.
+4. **Discover sources** repeats discovery. If Service/Node listing is unavailable, a backend uses an unusual name or subpath, or node labels do not match Kubernetes Node names, use **Advanced settings** to enter the namespace, Service, port, protocol and optional subpath (for example `/prometheus`).
+5. For centralized Prometheus using a custom cluster label, set its label and literal value in **Advanced settings**, for example `cluster=production`. Without a filter, all GPU series visible at that endpoint are eligible. Node-name matching is a discovery hint, not proof of cluster identity; verify the cluster filter when clusters reuse node names or a custom cluster label is used.
+
+Saved connections take precedence over discovery. Queries run immediately and poll 30 seconds after each completed refresh. Discovery probes common Prometheus/Thanos Query/VictoriaMetrics Service names and labels through the existing Kubernetes Service proxy, in batches of four with a five-second request timeout and a maximum of 24 endpoints. It does not install or modify monitoring components. Authenticated gateways and custom paths can require manual configuration; a separate backend login is not supported.
 
 Settings are stored by Headlamp's ConfigStore per cluster in this browser/profile. They contain no credentials and are not a server-wide deployment policy. Queries use the signed-in user's existing Headlamp authentication; a separate Prometheus login flow is not supported.
 
@@ -100,7 +101,9 @@ Historical data uses the equivalent `query_range` endpoint. Requests have a 15-s
 
 ## Access and deployment considerations
 
-The existing Kubernetes identity needs `get` on `services/proxy` for the chosen namespace/Service. Cluster discovery and resource detail pages retain Headlamp's own Node/Pod read requirements. Grant only the access your deployment needs; no RBAC changes are made by the plugin.
+The existing Kubernetes identity needs `get` on `services/proxy` for the chosen namespace/Service. Automatic discovery additionally uses `list` on Services across namespaces and Nodes; without Node access, detected sources require explicit selection. Manual connections do not require these discovery permissions. Resource detail pages retain Headlamp's own Node/Pod read requirements. Grant only the access your deployment needs; no RBAC changes are made by the plugin.
+
+Kubernetes Node capacity and Pod GPU requests describe scheduler resources, not actual utilization, memory usage, temperature or power. Those measurements still require DCGM Exporter and a scraping Prometheus backend. A GPU that is not exporting recent metrics cannot appear in this telemetry view.
 
 The Prometheus API can expose data across namespaces. Frontend filters are **not** authorization controls. Enforce tenant isolation in the monitoring backend or an authorized query gateway. Direct arbitrary URLs and credentials are intentionally not accepted in the connection form.
 
@@ -113,6 +116,7 @@ npm run preview
 The preview listens on `0.0.0.0:5178`. Open `http://127.0.0.1:5178` locally, or `http://<host-ip>:5178` from another machine on your network. This standalone preview is prominently labelled **synthetic test data** and supports light/dark themes and loading/empty/error/stale states. It does not connect to Kubernetes and does not validate hardware measurements.
 
 ```sh
+npm run lint-fix
 npm test
 npm run test:browser
 npm run test:promql
@@ -121,7 +125,7 @@ npm run storybook
 
 Browser checks use Playwright. By default they use `/usr/bin/google-chrome`; set `CHROME_PATH` to your browser executable, or adapt the Playwright launch configuration for another platform. Storybook includes connected, loading, denied, empty, stale and unconfigured stories.
 
-`test:promql` uses Docker and the official Prometheus 3.5.0 image to evaluate the actual query against controlled samples. The full Headlamp browser test requires `HEADLAMP_TEST_URL`; otherwise it is explicitly skipped. Follow [the validation instructions](docs/VALIDATION.md) to run it against an isolated local Headlamp.
+`test:promql` uses Docker and the official Prometheus 3.5.0 image to evaluate the actual query against controlled samples. Alternatively, set `PROMTOOL_PATH` to a local Prometheus `promtool` binary. The full Headlamp browser test requires `HEADLAMP_TEST_URL`; otherwise it is explicitly skipped. Follow [the validation instructions](docs/VALIDATION.md) to run it against an isolated local Headlamp.
 
 `npm start` runs the official SDK's development watcher and may install/update the development plugin in your local Headlamp profile. Enable Headlamp Plugin Development Mode only for trusted source code.
 
