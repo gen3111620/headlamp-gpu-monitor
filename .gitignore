@@ -1,0 +1,12 @@
+node_modules/
+dist/
+artifacts/
+test-results/
+playwright-report/
+storybook-static/
+coverage/
+*.tsbuildinfo
+.env*
+!.env.example
+headlamp-gpu-monitor.zip
+.git-from-archive/

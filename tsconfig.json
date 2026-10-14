@@ -1,0 +1,5 @@
+{
+  "extends": "./node_modules/@kinvolk/headlamp-plugin/config/plugins-tsconfig.json",
+  "compilerOptions": { "strict": true, "noEmit": true, "module": "ESNext", "target": "ES2022" },
+  "include": ["src", "tests", "playwright.config.ts", "vitest.config.ts", "promql.config.ts"]
+}
